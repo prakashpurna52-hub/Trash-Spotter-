@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trash Spotter</title>
+    <link rel="icon" href="C:\Html\Images\TrashTag Logo.jpg">
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="stylesheet.css" />
+</head>
+<body>
+<header>
+    <nav class="navbar">
+      <a href="#" class="logo">Trash Spotter.</a>
+      <ul class="navlist">
+        <li><a href="Trash spotter.html">Home</a></li>
+        <li><a href="member.html">Become A Member</a></li>
+      </nav>
+      </header>
+  <h1>Report a Trash Spot</h1>
+  <div class="form-container">
+  <form id="spotForm" enctype="multipart/form-data">
+    <input type="text" id="description" placeholder="Short description" required />
+    <input type="text" id="latitude" placeholder="Latitude" step="any" required />
+    <input type="text" id="longitude" placeholder="Longitude" step="any" required />
+    <input type="file" id="after_photo" accept="image/*" />
+    <button type="submit">Report</button>
+  </form>
+</div>
+  <div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+ <script>
+  var map = L.map('map').setView([17.3850, 78.4867], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  map.on('click', function(e) {
+    const lat = e.latlng.lat.toFixed(6);
+    const lng = e.latlng.lng.toFixed(6);
+    document.getElementById('latitude').value = lat;
+    document.getElementById('longitude').value = lng;
+  });
+
+  var redIcon = new L.Icon({
+    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+  });
+
+  var greenIcon = new L.Icon({
+    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+  });
+
+  function loadSpots() {
+    const data = localStorage.getItem('trashSpots');
+    return data ? JSON.parse(data) : [];
+  }
+
+  function saveSpots(spots) {
+    localStorage.setItem('trashSpots', JSON.stringify(spots));
+  }
+
+  function renderSpots() {
+    spots.forEach(spot => {
+      const marker = L.marker([spot.latitude, spot.longitude], {
+        icon: spot.resolved ? greenIcon : redIcon
+      }).addTo(map);
+
+      let popupContent = `<b>${spot.description}</b><br>`;
+      popupContent += `Votes: YES = ${spot.votes.yes}, NO = ${spot.votes.no}<br>`;
+
+      if (spot.resolved && spot.afterPhoto) {
+        popupContent += `<img src="${spot.afterPhoto}" alt="After photo" style="max-width:150px;"><br>`;
+        popupContent += `<button onclick="voteGreenSpot(${spot.id}, true)">👍 Green</button>
+                         <button onclick="voteGreenSpot(${spot.id}, false)">👎 Not Green</button>`;
+      } else if (!spot.resolved) {
+        popupContent += `<button onclick="markResolved(${spot.id})">Mark as Cleaned</button>`;
+      }
+
+      marker.bindPopup(popupContent);
+    });
+  }
+
+  function updateMap() {
+    if (window.markersGroup) {
+      window.markersGroup.clearLayers();
+    } else {
+      window.markersGroup = L.layerGroup().addTo(map);
+    }
+
+    spots.forEach(spot => {
+      const marker = L.marker([spot.latitude, spot.longitude], {
+        icon: spot.resolved ? greenIcon : redIcon
+      });
+
+      let popupContent = `<b>${spot.description}</b><br>`;
+      popupContent += `Votes: YES = ${spot.votes.yes}, NO = ${spot.votes.no}<br>`;
+
+      if (spot.resolved) {
+  if (spot.afterPhoto) {
+    popupContent += `<img src="${spot.afterPhoto}" alt="After photo" style="max-width:150px;"><br>`;
+  }
+  popupContent += `<button onclick="voteGreenSpot(${spot.id}, true)">👍</button>
+                   <button onclick="voteGreenSpot(${spot.id}, false)">👎</button>`;
+} else {
+  popupContent += `<button onclick="markResolved(${spot.id})">Mark as Cleaned</button>`;
+}
+      marker.bindPopup(popupContent);
+      window.markersGroup.addLayer(marker);
+    });
+  }
+
+  function markResolved(id) {
+    const spot = spots.find(s => s.id === id);
+    if (!spot) return alert('Spot not found');
+    spot.resolved = true;
+    saveSpots(spots);
+    updateMap();
+  }
+
+  function voteGreenSpot(id, isGreen) {
+    const spot = spots.find(s => s.id === id);
+    if (!spot) return alert('Spot not found');
+
+    if (isGreen) {
+      spot.votes.yes += 1;
+    } else {
+      spot.votes.no += 1;
+    }
+
+    saveSpots(spots);
+    updateMap();
+  }
+
+  let spots = loadSpots();
+  updateMap();
+
+  document.getElementById('spotForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const desc = document.getElementById('description').value.trim();
+    const lat = parseFloat(document.getElementById('latitude').value);
+    const lon = parseFloat(document.getElementById('longitude').value);
+    const photoInput = document.getElementById('after_photo');
+
+    if (!desc || isNaN(lat) || isNaN(lon)) {
+      alert('Please fill all required fields correctly.');
+      return;
+    }
+
+    if (photoInput.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        addSpot(desc, lat, lon, e.target.result);
+      };
+      reader.readAsDataURL(photoInput.files[0]);
+    } else {
+      addSpot(desc, lat, lon, '');
+    }
+
+    this.reset();
+  });
+
+  function addSpot(description, latitude, longitude, afterPhoto) {
+    const id = spots.length > 0 ? spots[spots.length - 1].id + 1 : 1;
+    const newSpot = {
+      id,
+      description,
+      latitude,
+      longitude,
+      votes: { yes: 0, no: 0 },
+      resolved: false,
+      afterPhoto
+    };
+
+    spots.push(newSpot);
+    saveSpots(spots);
+    updateMap();
+    alert('Spot reported!');
+  }
+
+  function clearAllSpots() {
+    spots = [];
+    localStorage.removeItem('trashSpots');
+    if (window.markersGroup) {
+      window.markersGroup.clearLayers();
+    }
+    console.log('All spots cleared and map refreshed');
+  }
+  clearAllSpots();
+</script>
+
+</body>
+</html>

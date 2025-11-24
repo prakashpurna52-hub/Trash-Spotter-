@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Become a Member - Trash Spotter</title>
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="stylesheet.css" />
+<body>
+</head>
+<body>
+    <header>
+    <nav class="navbar">
+      <a href="#" class="logo">Trash Spotter.</a>
+      <ul class="navlist">
+        <li><a href="Trash spotter.html">Home</a></li>
+        <li><a href="member.html">Become A Member</a></li>
+      </nav>
+      </header>
+    <h1>Become a Member of Trash Spotter</h1>
+    <div class="form-container">
+        <form id="registerForm" action="/api/register" method="POST">
+            <label for="name">Full Name *</label>
+            <input type="text" id="name" name="name" placeholder="Your full name" required>
+
+            <label for="email">Email Address *</label>
+            <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+
+            <label for="password">Password *</label>
+            <input type="password" id="password" name="password" placeholder="Create a password" required>
+
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="+91 12345 67890">
+
+            <button type="submit">Register</button>
+        </form>
+        <p class="note">* Required fields</p>
+    </div>
+    <script>
+         document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    alert("Registration successful! Redirecting to Trash Spotter...");
+    window.location.href = 'Trash spotter.html';
+  });
+    </script>
+</body>
+</html>
